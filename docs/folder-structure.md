@@ -35,7 +35,7 @@ daily-drilling-report/
 │       ├── public/
 │       ├── src/
 │       │   ├── app/                  # Next App Router: routes only, thin (dashboard/...)
-│       │   ├── features/             # project, well, section, report, product, inventory
+│       │   ├── features/             # project, well, section, report, product, inventory, user (+ auth)
 │       │   │   └── <feature>/
 │       │   │       ├── api/          # axios calls (list, create, edit, remove)
 │       │   │       ├── components/   # table, columns, toolbar, skeleton, empty state,
@@ -46,7 +46,8 @@ daily-drilling-report/
 │       │   │       └── type.ts       # row and request body types (mirror the API)
 │       │   ├── components/ui/        # shadcn/ui primitives
 │       │   ├── shared/components/    # UI used by several features (sidebar, pagination, form fields, providers)
-│       │   ├── hooks/                # generic hooks (use-mobile, use-debounce)
+│       │   ├── shared/lib/           # navigation.ts: the dashboard pages, per role (sidebar + dashboard home)
+│       │   ├── hooks/                # generic hooks (use-mobile)
 │       │   └── lib/                  # axios instance, query client, table features, utils
 │       ├── Dockerfile
 │       └── package.json
@@ -64,7 +65,8 @@ daily-drilling-report/
 └── .gitleaks.toml
 ```
 
-> Status: every feature has API routes and a web page (projects, wells, sections, reports, products, inventories).
+> Status: every feature has API routes and a web page (projects, wells, sections, reports, products, inventories, users).
+> `features/auth` in the web has no table page: it holds the login form, `AuthGuard`, `NavUser`, `useMe` / `useCan`.
 
 ## Rules
 
@@ -81,7 +83,8 @@ daily-drilling-report/
 
 1. API: create `features/<name>/` with schema, model, service, routes; register routes in `routes.ts` and the table in `db/schema.ts`.
 2. `bun run db:generate`, review the SQL, commit it.
-3. Web: create `features/<name>/` with `api/`, `hooks/`, `components/`, `lib/`, `type.ts`; add a route in `app/dashboard/<names>/page.tsx` and a link in `shared/components/menu-sidebar.tsx`.
+3. Web: create `features/<name>/` with `api/`, `hooks/`, `components/`, `lib/`, `type.ts`; add a route in `app/dashboard/<names>/page.tsx` and an entry in `shared/lib/navigation.ts` (sidebar and dashboard home read it).
 4. Map the feature's `409` messages (duplicate, still referenced) in its hooks and sheets; see [error-flow.md](error-flow.md).
-5. Give every route a `role` option and add the feature to `apps/api/test/permissions.test.ts`.
+5. Give every route a `role` option and add the feature to `apps/api/test/permissions.test.ts`. In the web, hide
+   what a role can't do with `useCan("<role>")` in the add sheet, the table and the row actions (see [authentication.md](authentication.md#web)).
 6. Add tests (`*.schema.test.ts` in the API, `lib/*-form.test.ts` in the web) and update the docs if the architecture changed.
