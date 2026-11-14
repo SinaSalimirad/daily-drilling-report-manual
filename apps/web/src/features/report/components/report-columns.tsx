@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import type { DataTableFeatures } from "@/lib/table-feature";
 import type { ReportListItem } from "../type";
 import { ReportDeleteDialog } from "./report-delete-dialog";
@@ -30,6 +31,8 @@ const centeredCell = (value: string) => <div className="text-center tabular-nums
 function ReportActions({ report }: { report: ReportListItem }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // A reporter may edit but not delete; the table hides this whole column from viewers.
+  const canDelete = useCan("manager");
 
   return (
     <div className="flex justify-center">
@@ -43,10 +46,14 @@ function ReportActions({ report }: { report: ReportListItem }) {
           <DropdownMenuGroup>
             <DropdownMenuLabel>Report actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setEditOpen(true)}>Edit report</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-              Delete report
-            </DropdownMenuItem>
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  Delete report
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

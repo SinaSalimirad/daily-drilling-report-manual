@@ -50,7 +50,6 @@ export function ProductDeleteDialog({ product, open, onOpenChange }: Props) {
           >
             Cancel
           </DialogClose>
-          {/* <Button variant="outline" className="h-10 gap-3 px-3" onClick={handleSort}></Button> */}
           <Button variant="destructive" size="lg" onClick={handleConfirm} disabled={isPending}>
             {isPending ? (
               <Loader2 className="size-4 animate-spin" />

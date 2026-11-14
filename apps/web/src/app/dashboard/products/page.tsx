@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowRightFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductEmpty } from "@/features/product/components/product-empty";
 import { ProductSheet } from "@/features/product/components/product-sheet";
@@ -35,16 +34,7 @@ export default function ProductsPage() {
           </p>
         </div>
 
-        {products.length > 0 && (
-          <div className="flex items-center gap-2">
-            <ProductSheet />
-
-            <Button size="lg" className="h-10 p-4" variant="outline">
-              <ArrowRightFromLine className="size-4 -rotate-90" />
-              Export
-            </Button>
-          </div>
-        )}
+        {products.length > 0 && <ProductSheet />}
       </header>
 
       {products.length > 0 ? <ProductTable data={products} /> : <ProductEmpty />}

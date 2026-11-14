@@ -28,17 +28,14 @@ const COLUMNS = [
 export function ProductsSkeleton() {
   return (
     <section className="space-y-4" aria-busy="true" aria-label="Loading products">
-      {/* Page header: title, description, Add + Export buttons */}
+      {/* Page header: title, description, Add button */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <Skeleton className="h-7 w-28" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-10 w-28" />
-          <Skeleton className="h-10 w-24" />
-        </div>
+        <Skeleton className="h-10 w-28" />
       </div>
 
       <div className="flex flex-col gap-2 rounded-sm border p-2">

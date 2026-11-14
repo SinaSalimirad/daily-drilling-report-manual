@@ -1,8 +1,8 @@
 "use client";
 
-import { isAxiosError } from "axios";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useProducts } from "@/features/product/hooks/use-product";
 import { useReports } from "@/features/report/hooks/use-report";
 import { useWells } from "@/features/well/hooks/use-well";
@@ -14,7 +14,8 @@ import { productLabel, toReportItems } from "./inventory-items";
 
 export function InventorySheet() {
   const [open, setOpen] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // The API only lets a reporter (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("reporter");
   const { mutateAsync: createInventory } = useCreateInventory();
 
   // These lists are already cached by the Wells, Reports and Products pages.
@@ -32,16 +33,10 @@ export function InventorySheet() {
   }));
 
   const form = useInventoryForm(async (values: InventoryFormValues) => {
-    setSubmitError(null);
-
     try {
       await createInventory(toPayload(values));
-    } catch (error) {
-      setSubmitError(
-        isAxiosError(error) && error.response?.status === 409
-          ? "This report already has this product."
-          : "Could not add the inventory. Please try again.",
-      );
+    } catch {
+      // The hook shows the error as a toast; keep the sheet open so nothing typed is lost.
       return false;
     }
 
@@ -49,21 +44,19 @@ export function InventorySheet() {
     return true;
   });
 
+  if (!canAdd) return null;
+
   return (
     <InventoryFormSheet
       form={form}
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) {
-          form.reset();
-          setSubmitError(null);
-        }
+        if (!next) form.reset();
       }}
       title="Add New Inventory"
       submitLabel="Add Inventory"
       submittingLabel="Adding..."
-      error={submitError}
       wellItems={wellItems}
       reportItems={toReportItems(reports)}
       productItems={productItems}

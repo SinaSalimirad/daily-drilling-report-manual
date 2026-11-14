@@ -2,7 +2,7 @@ import type { Options } from "elysia-rate-limit";
 import { env } from "@/config/env";
 
 // Behind nginx every socket peer is the proxy, so prefer the forwarded client address.
-export const clientIpGenerator: Options["generator"] = (request, server) => {
+const clientIpGenerator: Options["generator"] = (request, server) => {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = request.headers.get("x-real-ip") ?? forwarded ?? server?.requestIP(request)?.address;
 
@@ -30,5 +30,20 @@ export const rateLimitConfig: Partial<Options> = {
 export const writeRateLimitConfig: Partial<Options> = {
   ...baseConfig,
   max: env.RATE_LIMIT_WRITE_MAX,
+  scoping: "scoped",
+};
+
+// Login only: a small budget per client ip slows down password guessing.
+export const loginRateLimitConfig: Partial<Options> = {
+  ...baseConfig,
+  max: env.RATE_LIMIT_LOGIN_MAX,
+  scoping: "scoped",
+};
+
+// Refresh only: every open client refreshes once per access token lifetime, so this is
+// larger than the login budget but still caps someone hammering /auth/refresh.
+export const refreshRateLimitConfig: Partial<Options> = {
+  ...baseConfig,
+  max: env.RATE_LIMIT_REFRESH_MAX,
   scoping: "scoped",
 };

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarInset,
@@ -21,73 +22,19 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { NavUser } from "@/features/auth/components/nav-user";
+import { useMe } from "@/features/auth/hooks/use-auth";
+import { navGroupsFor } from "@/shared/lib/navigation";
 
-const data = {
-  navMain: [
-    {
-      title: "WORKSPACE",
-      url: "#",
-      items: [
-        {
-          title: "Dashboard",
-          url: "/dashboard",
-        },
-        {
-          title: "Daily Reports",
-          url: "#",
-        },
-        {
-          title: "Operations",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "MANAGEMENT",
-      url: "#",
-      items: [
-        { title: "Projects", url: "/dashboard/projects" },
-        { title: "Wells", url: "/dashboard/wells" },
-        { title: "Sections", url: "/dashboard/sections" },
-        { title: "Reports", url: "/dashboard/reports" },
-        {
-          title: "Inventories",
-          url: "/dashboard/inventories",
-        },
-        {
-          title: "Products",
-          url: "/dashboard/products",
-        },
-      ],
-    },
-    {
-      title: "CONFIGURATION",
-      url: "#",
-      items: [
-        {
-          title: "Reports & Analytics",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
-
-// "/dashboard" is only active on the dashboard itself; every other entry is also active on
-// its sub-routes (e.g. /dashboard/wells/123). Placeholder links ("#") are never active.
-function isActiveLink(pathname: string, url: string) {
-  if (url === "#") return false;
-  if (url === "/dashboard") return pathname === url;
-
-  return pathname === url || pathname.startsWith(`${url}/`);
-}
+// A page is also active on its sub-routes (e.g. /dashboard/wells/123).
+const isActiveLink = (pathname: string, url: string) =>
+  pathname === url || pathname.startsWith(`${url}/`);
 
 export function MenuSidebar({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  // AuthGuard renders this only with a logged-in user; until then there is nothing to list.
+  const { data: user } = useMe();
+  const navGroups = user ? navGroupsFor(user.role) : [];
 
   return (
     <SidebarProvider>
@@ -95,13 +42,13 @@ export function MenuSidebar({ children }: { children: ReactNode }) {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" render={<Link href="#" />}>
+              <SidebarMenuButton size="lg" render={<Link href="/dashboard" />}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GalleryVerticalEndIcon className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-medium">Documentation</span>
-                  <span className="">v1.0.0</span>
+                  <span className="font-medium">Daily Mud Fluid Report</span>
+                  <span className="text-xs text-muted-foreground">Savaenergy</span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -110,30 +57,40 @@ export function MenuSidebar({ children }: { children: ReactNode }) {
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              {data.navMain.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton render={<Link href={item.url} className="font-medium" />}>
-                    {item.title}
-                  </SidebarMenuButton>
-                  {item.items?.length ? (
-                    <SidebarMenuSub>
-                      {item.items.map((item) => (
-                        <SidebarMenuSubItem key={item.title}>
-                          <SidebarMenuSubButton
-                            isActive={isActiveLink(pathname, item.url)}
-                            render={<Link href={item.url} />}
-                          >
-                            {item.title}
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  ) : null}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={pathname === "/dashboard"}
+                  render={<Link href="/dashboard" className="font-medium" />}
+                >
+                  Dashboard
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              {navGroups.map((group) => (
+                <SidebarMenuItem key={group.title}>
+                  {/* A heading, not a link: a group has no page of its own. */}
+                  <p className="px-2 py-1.5 text-xs font-medium text-sidebar-foreground/70">
+                    {group.title}
+                  </p>
+                  <SidebarMenuSub>
+                    {group.items.map((item) => (
+                      <SidebarMenuSubItem key={item.url}>
+                        <SidebarMenuSubButton
+                          isActive={isActiveLink(pathname, item.url)}
+                          render={<Link href={item.url} />}
+                        >
+                          {item.title}
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    ))}
+                  </SidebarMenuSub>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter>
+          <NavUser />
+        </SidebarFooter>
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
