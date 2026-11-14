@@ -1,7 +1,8 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { NotFoundError } from "elysia";
-import { db } from "@/db";
+import { db, type Transaction } from "@/db";
 import { revokeAllSessionsForUser } from "@/features/auth/sessions.service";
+import { Role } from "./roles";
 import { type CreateUser, publicUserColumns, type UpdateUser, users } from "./users.schema";
 
 export const hashPassword = (password: string) =>
@@ -18,6 +19,39 @@ async function hidingQueryParams<T>(query: Promise<T>): Promise<T> {
       cause: (error as Error).cause,
     });
   }
+}
+
+// Without an active admin nobody can manage users any more, and only direct database access
+// could fix that. Elysia answers with `status` and `toResponse()` when this is thrown.
+export class LastAdminError extends Error {
+  status = 409;
+
+  constructor() {
+    super("At least one active admin must remain.");
+  }
+
+  toResponse() {
+    return Response.json({ message: this.message }, { status: this.status });
+  }
+}
+
+const removesAdminAccess = ({ role, isActive }: UpdateUser) =>
+  (role !== undefined && role !== Role.Admin) || isActive === false;
+
+// Locks every active admin row until the transaction ends. Two admins demoting each other at
+// the same moment touch different rows, so without the lock both updates would commit and no
+// admin would be left. With it the second request waits, then sees only one admin and is refused.
+// The rows are locked in id order, so two such transactions can't deadlock each other.
+async function assertAnotherAdminRemains(tx: Transaction, userId: string) {
+  const activeAdmins = await tx
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.role, Role.Admin), eq(users.isActive, true)))
+    .orderBy(asc(users.id))
+    .for("update");
+
+  const isOnlyAdmin = activeAdmins.length === 1 && activeAdmins[0]?.id === userId;
+  if (isOnlyAdmin) throw new LastAdminError();
 }
 
 export function userService() {
@@ -54,6 +88,7 @@ export function userService() {
 
     // Partial update (PATCH). Deactivating a user or setting a new password also ends all of
     // their sessions, in the same transaction, so they can't refresh with an old token.
+    // Throws LastAdminError when the change would leave no active admin.
     update: async (id: string, { password, ...fields }: UpdateUser) => {
       const changes = {
         ...fields,
@@ -66,6 +101,8 @@ export function userService() {
       }
 
       return db.transaction(async (tx) => {
+        if (removesAdminAccess(fields)) await assertAnotherAdminRemains(tx, id);
+
         const [row] = await hidingQueryParams(
           tx.update(users).set(changes).where(eq(users.id, id)).returning(publicUserColumns),
         );

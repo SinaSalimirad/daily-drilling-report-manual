@@ -9,8 +9,8 @@ import { userService } from "./users.service";
 
 const service = userService();
 
-// An admin can't demote or deactivate themselves; otherwise the last admin could lock
-// everyone out of user management. Another admin has to do it.
+// An admin can't demote or deactivate themselves; another admin has to do it. The service
+// also refuses any change that would leave no active admin (409, LastAdminError).
 const changesOwnAccess = (actingUserId: string, targetId: string, input: UpdateUser) =>
   actingUserId === targetId && (input.role !== undefined || input.isActive !== undefined);
 
