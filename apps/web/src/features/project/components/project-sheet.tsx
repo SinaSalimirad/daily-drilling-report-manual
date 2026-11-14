@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useCreateProject } from "../hooks/use-project";
 import { useProjectForm } from "../hooks/use-project-form";
 import { type ProjectFormValues, toPayload } from "../lib/project-form";
@@ -9,6 +10,8 @@ import { ProjectFormSheet } from "./project-form-sheet";
 
 export function ProjectSheet() {
   const [open, setOpen] = useState(false);
+  // The API only lets a manager (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("manager");
   const { mutateAsync: createProject } = useCreateProject();
 
   const form = useProjectForm(async (values: ProjectFormValues) => {
@@ -22,6 +25,8 @@ export function ProjectSheet() {
     setOpen(false);
     return true;
   });
+
+  if (!canAdd) return null;
 
   return (
     <ProjectFormSheet

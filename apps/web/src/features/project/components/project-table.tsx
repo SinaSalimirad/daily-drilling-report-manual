@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { features } from "@/lib/table-feature";
 import { DataTablePagination } from "@/shared/components/data-table-pagination";
 import { PROJECT_PAGE_SIZE, PROJECT_ROW_CLASS, PROJECT_TABLE_MIN_HEIGHT } from "../constants";
@@ -23,11 +24,14 @@ export function ProjectTable({ data }: { data: Project[] }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: PROJECT_PAGE_SIZE });
 
+  // Viewers get no Actions column: the API would refuse every action in it (403).
+  const canEdit = useCan("manager");
+
   const table = useTable({
     features,
     data,
     columns: projectColumns,
-    state: { sorting, columnFilters, pagination },
+    state: { sorting, columnFilters, pagination, columnVisibility: { actions: canEdit } },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,

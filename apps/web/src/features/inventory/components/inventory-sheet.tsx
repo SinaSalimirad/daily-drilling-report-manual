@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useProducts } from "@/features/product/hooks/use-product";
 import { useReports } from "@/features/report/hooks/use-report";
 import { useWells } from "@/features/well/hooks/use-well";
@@ -13,6 +14,8 @@ import { productLabel, toReportItems } from "./inventory-items";
 
 export function InventorySheet() {
   const [open, setOpen] = useState(false);
+  // The API only lets a reporter (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("reporter");
   const { mutateAsync: createInventory } = useCreateInventory();
 
   // These lists are already cached by the Wells, Reports and Products pages.
@@ -40,6 +43,8 @@ export function InventorySheet() {
     setOpen(false);
     return true;
   });
+
+  if (!canAdd) return null;
 
   return (
     <InventoryFormSheet

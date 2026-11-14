@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { features } from "@/lib/table-feature";
 import { DataTablePagination } from "@/shared/components/data-table-pagination";
 import { WELL_PAGE_SIZE, WELL_ROW_CLASS, WELL_TABLE_MIN_HEIGHT } from "../constants";
@@ -23,11 +24,14 @@ export function WellTable({ data }: { data: WellListItem[] }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: WELL_PAGE_SIZE });
 
+  // Viewers get no Actions column: the API would refuse every action in it (403).
+  const canEdit = useCan("manager");
+
   const table = useTable({
     features,
     data,
     columns: wellColumns,
-    state: { sorting, columnFilters, pagination },
+    state: { sorting, columnFilters, pagination, columnVisibility: { actions: canEdit } },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,

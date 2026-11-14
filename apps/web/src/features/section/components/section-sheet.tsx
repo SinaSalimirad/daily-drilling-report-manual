@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useWells } from "@/features/well/hooks/use-well";
 import { useCreateSection } from "../hooks/use-section";
 import { useSectionForm } from "../hooks/use-section-form";
@@ -10,6 +11,8 @@ import { SectionFormSheet } from "./section-form-sheet";
 
 export function SectionSheet() {
   const [open, setOpen] = useState(false);
+  // The API only lets a manager (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("manager");
   const { mutateAsync: createSection } = useCreateSection();
 
   // The list is already cached by the Wells page; the select only needs id + name.
@@ -30,6 +33,8 @@ export function SectionSheet() {
     setOpen(false);
     return true;
   });
+
+  if (!canAdd) return null;
 
   return (
     <SectionFormSheet
