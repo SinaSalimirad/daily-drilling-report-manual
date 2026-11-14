@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { apiErrorMessage } from "@/lib/api-error";
 import { authApi } from "../api/auth.api";
 import { loginErrorMessage } from "../lib/login-form";
+import { hasRole } from "../lib/roles";
+import type { UserRole } from "../type";
 
 export const authKeys = {
   all: ["auth"] as const,
@@ -34,6 +36,15 @@ export function useMe() {
     // A 401 has already been through the refresh in lib/axios.ts; retrying can't fix it.
     retry: false,
   });
+}
+
+// Whether the logged-in user has at least the `minimum` role. It only decides what the UI
+// offers (no button for something the API would answer with 403); the API stays the gate.
+// False while the user is still loading.
+export function useCan(minimum: UserRole) {
+  const { data: user } = useMe();
+
+  return user !== undefined && hasRole(user.role, minimum);
 }
 
 export function useLogout() {

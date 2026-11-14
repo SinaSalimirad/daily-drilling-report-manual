@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  BadgeCheckIcon,
-  BellIcon,
-  ChevronsUpDownIcon,
-  CreditCardIcon,
-  LogOutIcon,
-  SparklesIcon,
-} from "lucide-react";
-import { toast } from "sonner";
+import { ChevronsUpDownIcon, LogOutIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -29,9 +21,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLogout, useMe } from "../hooks/use-auth";
 import { initialsOf } from "../lib/initials";
 import type { AuthUser } from "../type";
-
-// Placeholder items from the shadcn block; their pages don't exist yet.
-const comingSoon = () => toast.info("Coming soon");
 
 function UserSummary({ user }: { user: AuthUser }) {
   return (
@@ -65,7 +54,7 @@ export function NavUser() {
     );
   }
 
-  // No session: lib/axios.ts already sends the browser to /login, so there is nothing to show.
+  // AuthGuard only renders the dashboard with a user, so this is a failed background refetch.
   if (isError) return null;
 
   return (
@@ -97,28 +86,6 @@ export function NavUser() {
                 </div>
                 <p className="px-1 pb-1.5 text-xs text-muted-foreground capitalize">{user.role}</p>
               </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={comingSoon}>
-                <SparklesIcon />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={comingSoon}>
-                <BadgeCheckIcon />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={comingSoon}>
-                <CreditCardIcon />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={comingSoon}>
-                <BellIcon />
-                Notifications
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={logout.isPending} onClick={() => logout.mutate()}>

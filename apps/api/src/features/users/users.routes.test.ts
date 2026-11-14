@@ -8,6 +8,7 @@ import {
   TEST_PASSWORD,
 } from "../../../test/helpers";
 import { Role } from "./roles";
+import { LastAdminError, userService } from "./users.service";
 
 const newUser = {
   email: "New.Driller@Example.com",
@@ -108,5 +109,40 @@ describe.skipIf(!hasTestDatabase)("users routes", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ displayName: "Renamed" });
+  });
+
+  it("refuse to demote or deactivate the only active admin (409)", async () => {
+    const { user } = await signInAs(Role.Admin);
+    // A deactivated admin does not count as one that remains.
+    const { user: inactiveAdmin, cookie } = await signInAs(Role.Admin);
+    await userService().update(inactiveAdmin.id, { isActive: false });
+
+    const demote = await callApi("PATCH", `/users/${user.id}`, {
+      cookie,
+      body: { role: Role.Manager },
+    });
+
+    expect(demote.status).toBe(409);
+    expect(await demote.json()).toEqual({ message: "At least one active admin must remain." });
+    expect(userService().update(user.id, { isActive: false })).rejects.toBeInstanceOf(
+      LastAdminError,
+    );
+    expect(await userService().findOne(user.id)).toMatchObject({ role: Role.Admin });
+  });
+
+  it("keep one admin when two admins demote each other at the same time", async () => {
+    const first = await signInAs(Role.Admin);
+    const second = await signInAs(Role.Admin);
+    const demoteBy = (cookie: string, targetId: string) =>
+      callApi("PATCH", `/users/${targetId}`, { cookie, body: { role: Role.Viewer } });
+
+    const responses = await Promise.all([
+      demoteBy(first.cookie, second.user.id),
+      demoteBy(second.cookie, first.user.id),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const admins = (await userService().list()).filter((user) => user.role === Role.Admin);
+    expect(admins).toHaveLength(1);
   });
 });

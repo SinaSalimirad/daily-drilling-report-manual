@@ -1,10 +1,9 @@
 # Authentication and authorization
 
-**Status: API done (milestone `v0.4.0`, access + refresh tokens added after it); web: login page and silent
-refresh done, the rest not started.** Every route under `/api/v1`, except `POST /auth/login`, `POST /auth/token`,
-`POST /auth/refresh` and `POST /auth/logout`, needs a valid access token, and every route states the minimum role it
-needs. The web app has a login page (`/login`), but the dashboard does not check the session yet (see [Web](#web)),
-so a logged-out user still gets `401` from every request.
+**Status: done (milestone `v0.4.0`), API and web.** Every route under `/api/v1`, except `POST /auth/login`,
+`POST /auth/token`, `POST /auth/refresh` and `POST /auth/logout`, needs a valid access token, and every route states
+the minimum role it needs. The web app has a login page, renders the dashboard only for a logged-in user, hides what
+the user's role can't do, and has a users page for admins (see [Web](#web)).
 
 ## Goals
 
@@ -142,7 +141,19 @@ verification link, and set it when the link is opened.
 | `GET /api/v1/auth/me`                        | the current user from the database; `401` without a valid access token or for a deactivated user                                                                                                         |
 | `GET /api/v1/users`, `GET /api/v1/users/:id` | list / one user (admin)                                                                                                                                                                                  |
 | `POST /api/v1/users`                         | body `{ email, password, displayName, role? }` (admin). Duplicate email is `409`                                                                                                                         |
-| `PATCH /api/v1/users/:id`                    | any of `{ displayName, role, isActive, password }` (admin). An admin can't change their own `role` or `isActive` (`403`), so the last admin can't lock everyone out                                      |
+| `PATCH /api/v1/users/:id`                    | any of `{ displayName, role, isActive, password }` (admin). An admin can't change their own `role` or `isActive` (`403`), and no change may leave the system without an active admin (`409`, see below)  |
+
+### The last admin
+
+Without an active admin nobody can manage users, and only direct database access could fix it.
+Two rules keep one:
+
+1. An admin can't demote or deactivate **themselves** (`403`, `users.routes.ts`).
+2. `userService().update` refuses a change that would leave **no active admin**
+   (`409 { message: "At least one active admin must remain." }`, `LastAdminError`). Rule 1 alone
+   is not enough: two admins demoting each other at the same moment each pass it. So the update
+   first locks every active admin row (`SELECT … FOR UPDATE`, in id order) inside its
+   transaction; the second request waits for the first, then sees one admin left and is refused.
 
 A user is always returned without `password_hash`: services select `publicUserColumns` only.
 Users can't sign themselves up; an admin creates them. **The first admin** is created from the
@@ -204,13 +215,16 @@ The check runs after body/params validation, so an anonymous request with an inv
 
 - Unit: `roles.test.ts`, `access-token.test.ts` (expiry, tampered payload, `alg: none`, other
   secret), `refresh-token.test.ts`, `users.schema.test.ts`, `env.test.ts`; web:
-  `lib/axios.test.ts` (one shared refresh, retry once, 409, no refresh for login).
+  `lib/axios.test.ts` (one shared refresh, retry once, 409, no refresh for login),
+  `features/auth/lib/roles.test.ts`, `shared/lib/navigation.test.ts` (pages per role),
+  `features/user/lib/user-form.test.ts` (validation, only changed fields are sent).
 - Database (real Postgres, skipped unless `TEST_DATABASE_URL` is set; CI sets it):
   `auth.routes.test.ts` (login, cookie flags and paths, `/auth/token`, bearer header, expired
   access token, logout, rotation on login),
   `refresh.routes.test.ts` (rotation, 30-day cap, grace window, two parallel refreshes, reuse
   detection ending every session, replay not ending later sessions, expiry),
-  `users.routes.test.ts` (admin only, revocation on deactivate / new password, self-demotion),
+  `users.routes.test.ts` (admin only, revocation on deactivate / new password, self-demotion,
+  the last admin, two admins demoting each other in parallel),
   and `apps/api/test/permissions.test.ts`, which checks for **every feature** that an anonymous
   request gets `401`, a viewer can read, a role below the write role gets `403` and the write role
   gets past the check, and only a manager gets past the delete check.
@@ -236,15 +250,31 @@ one tab that fail together share one refresh; across tabs a Web Lock (`navigator
 (the server's grace window and `409` are the fallback). If the refresh fails, the page goes to
 `/login` with a full load, which also empties the query cache.
 
-**Not started:**
+**Dashboard guard:** the dashboard layout wraps everything in `AuthGuard`
+(`features/auth/components/auth-guard.tsx`). It calls `GET /auth/me` (TanStack Query, key
+`["auth", "me"]`), shows a loader until the user is known, and goes to `/login` on `401`. `/` only
+redirects to `/dashboard`, so a visitor without a session ends up on `/login`.
 
-- The dashboard layout calls `GET /auth/me`
-  (TanStack Query, key `["auth", "me"]`) and redirects to `/login` on `401`.
-- A `useCan(role)` hook over the `me` query; the action menus hide "Delete …" for users below
-  manager and the "Add …" buttons for viewers. This is convenience only; the API is the gate.
-- Show the current user and a logout button in the sidebar header (today it is a static
-  "Documentation v1.0.0" block).
-- A users page for admins over `/users`.
+**Hiding what a role can't do:** `useCan(role)` (`features/auth/hooks/use-auth.ts`) is true when
+the logged-in user has at least that role (`hasRole` in `features/auth/lib/roles.ts`, the same
+order as the API). This is convenience only; the API is the gate.
+
+- "Add …" buttons render nothing below the write role (`<feature>-sheet.tsx`).
+- The tables hide the Actions column below the write role (`<feature>-table.tsx`).
+- Reports and inventories hide "Delete …" below manager (`<feature>-columns.tsx`), because a
+  reporter may edit them but not delete them.
+- The sidebar and the dashboard home list only the pages the role may open
+  (`navGroupsFor` in `shared/lib/navigation.ts`).
+
+**Current user and logout:** `NavUser` at the bottom of the sidebar shows name, email and role,
+with a "Log out" item. Logout clears the query cache, so the next user of the browser sees none
+of the previous user's data.
+
+**Users page** (`/dashboard/users`, `features/user`, admin only): list, "Add User" (email, name,
+password, role) and edit (name, role, status, new password). There is no delete; a user is
+deactivated. The edit form sends **only the fields that changed** (`toUpdatePayload`), because
+the API answers `403` when an admin sends `role` or `isActive` for their own account, even
+unchanged. An admin editing their own account sees role and status disabled.
 
 ## Desktop app
 

@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useSections } from "@/features/section/hooks/use-section";
 import { useWells } from "@/features/well/hooks/use-well";
 import { useCreateReport } from "../hooks/use-report";
@@ -11,6 +12,8 @@ import { ReportFormSheet } from "./report-form-sheet";
 
 export function ReportSheet() {
   const [open, setOpen] = useState(false);
+  // The API only lets a reporter (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("reporter");
   const { mutateAsync: createReport } = useCreateReport();
 
   // Both lists are already cached by the Wells and Sections pages.
@@ -38,6 +41,8 @@ export function ReportSheet() {
     setOpen(false);
     return true;
   });
+
+  if (!canAdd) return null;
 
   return (
     <ReportFormSheet

@@ -21,6 +21,7 @@ rate limiter ────────┘
 | `404`  | No row with that id (`GET /:id`, `PATCH /:id`, `DELETE /:id`)                                                                                                                                                           | service throws Elysia `NotFoundError`                    | plain text `Project "<id>" not found`                                                 |
 | `409`  | **Duplicate**: unique constraint (`23505`), e.g. project name, well name inside a project, section name or sequence inside a well, report number or date inside a well, product name+size+unit, product inside a report | `plugins/db-errors.plugin.ts`                            | `{ message: "A record with the same values already exists." }`                        |
 | `409`  | **Still referenced**: foreign key violation (`23503`) on `DELETE`, e.g. a project that has wells                                                                                                                        | `db-errors.plugin.ts`                                    | `{ message: "This record is used elsewhere and can't be deleted." }`                  |
+| `409`  | **Last admin**: a `PATCH /users/:id` that would leave no active admin                                                                                                                                                   | `LastAdminError` in `features/users/users.service.ts`    | `{ message: "At least one active admin must remain." }`                               |
 | `415`  | Login (`/auth/login` or `/auth/token`) sent with a content type other than `application/json` (blocks cross-site form posts)                                                                                            | `features/auth/auth.routes.ts`                           | `{ message: "Send the login as application/json." }`                                  |
 | `422`  | **Invalid body / params / query**: a zod rule failed (blank name, non-uuid id, negative depth, offshore rig without water depth, ...)                                                                                   | Elysia's built-in validation                             | `{ type: "validation", on: "body", property, message, errors: [...] }`                |
 | `422`  | **Missing reference**: foreign key violation (`23503`) on `POST` / `PATCH`, e.g. `projectId` of a project that does not exist, or a `sectionId` of another well                                                         | `db-errors.plugin.ts`                                    | `{ message: "A referenced record does not exist or belongs to a different parent." }` |
@@ -81,7 +82,8 @@ never choose wording; a sheet's `catch` only returns `false` so it stays open.
 | anything else          | the fallback, "Could not add / save / delete the … Please try again."                    |
 
 Login overrides `401` ("Invalid email or password."), `403` (email not verified) and `429`
-(`loginErrorMessage` in `features/auth/lib/login-form.ts`).
+(`loginErrorMessage` in `features/auth/lib/login-form.ts`). The users page overrides `403`
+(own role or status) and `409` (duplicate email on create, last admin on edit).
 
 - **Lists** (`useQuery`): the page shows a "Could not load … Try again" box with a refetch button.
   Queries retry once and are considered fresh for 30 seconds.

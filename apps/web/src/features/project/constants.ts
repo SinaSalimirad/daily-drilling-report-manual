@@ -1,6 +1,6 @@
 // Values must match `RigType` / `CurrencyCode` in apps/api/src/features/projects/projects.schema.ts.
-export const RIG_TYPES = ["offshore", "onshore"] as const;
-export const CURRENCY_CODES = ["USD", "GBP", "EUR", "CNY", "IRR"] as const;
+const RIG_TYPES = ["offshore", "onshore"] as const;
+const CURRENCY_CODES = ["USD", "GBP", "EUR", "CNY", "IRR"] as const;
 
 export type RigType = (typeof RIG_TYPES)[number];
 export type CurrencyCode = (typeof CURRENCY_CODES)[number];

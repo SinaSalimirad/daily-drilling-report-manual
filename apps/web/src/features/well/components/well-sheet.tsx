@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useCan } from "@/features/auth/hooks/use-auth";
 import { useProjects } from "@/features/project/hooks/use-project";
 import { useCreateWell } from "../hooks/use-well";
 import { useWellForm } from "../hooks/use-well-form";
@@ -10,6 +11,8 @@ import { WellFormSheet } from "./well-form-sheet";
 
 export function WellSheet() {
   const [open, setOpen] = useState(false);
+  // The API only lets a manager (or higher) add one; below that there is no button to show.
+  const canAdd = useCan("manager");
   const { mutateAsync: createWell } = useCreateWell();
 
   // The list is already cached by the Projects page; the select only needs id + name.
@@ -27,6 +30,8 @@ export function WellSheet() {
     setOpen(false);
     return true;
   });
+
+  if (!canAdd) return null;
 
   return (
     <WellFormSheet

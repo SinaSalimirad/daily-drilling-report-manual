@@ -1,6 +1,6 @@
 // Values must match the enums in apps/api/src/features/wells/wells.schema.ts
 // (`Designation`, `WellType`) and `RigType` in apps/api/src/features/projects/projects.schema.ts.
-export const DESIGNATIONS = [
+const DESIGNATIONS = [
   "exploration",
   "cuttings",
   "re-injection",
@@ -11,8 +11,8 @@ export const DESIGNATIONS = [
   "perforation",
   "plugging",
 ] as const;
-export const WELL_TYPES = ["Directional", "Vertical"] as const;
-export const RIG_TYPES = ["offshore", "onshore"] as const;
+const WELL_TYPES = ["Directional", "Vertical"] as const;
+const RIG_TYPES = ["offshore", "onshore"] as const;
 
 export type Designation = (typeof DESIGNATIONS)[number];
 export type WellType = (typeof WELL_TYPES)[number];
