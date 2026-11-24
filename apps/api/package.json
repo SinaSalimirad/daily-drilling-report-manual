@@ -22,7 +22,7 @@
     "elysia": "^1.4.30",
     "elysia-rate-limit": "^5.1.2",
     "jose": "6.2.17",
-    "logixlysia": "^6.10.4",
+    "logixlysia": "^6.14.0",
     "pg": "^8.23.1",
     "uuid": "^14.0.3",
     "zod": "^4.6.7"
